@@ -1,0 +1,23 @@
+dist: bionic
+
+language: python
+
+python:
+  - 3.8
+
+addons:
+  apt:
+    packages:
+      - pocl-opencl-icd
+      - clinfo
+
+install:
+  - pip install -r requirements.txt
+  - pip install flake8
+
+before_script:
+  - clinfo
+
+script:
+  - flake8
+  - python ./reduction.py
