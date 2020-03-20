@@ -37,11 +37,9 @@ __kernel void sum_axis1(__global double* a, __local float* b,
     int lsize = get_local_size(1);
     int wg = get_group_id(1);
 
-
-    // Copy row to local memory
+    // Copy to local memory
     b[lid] = a[gid0*gsize1 + gid1];
     barrier(CLK_LOCAL_MEM_FENCE);
-    printf("%d %d <- %f\n", gid0, gid1, b[lid]);
 
     // Reduction within work group, sum is left in b[0]
     for (int stride=lsize>>1; stride>0; stride>>=1) {
@@ -53,6 +51,7 @@ __kernel void sum_axis1(__global double* a, __local float* b,
 
     // Local thread 0 copies its work group sum to the result array
     if (lid == 0) {
-        partials[gid0 + wg] = b[0];
+        int wg_per_row = gsize1 / lsize;
+        partials[gid0*wg_per_row + wg] = b[0];
     }
 }

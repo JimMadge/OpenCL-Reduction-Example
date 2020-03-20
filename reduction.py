@@ -27,22 +27,24 @@ if __name__ == "__main__":
     program = cl.Program(context, kernel_source).build()
 
     # Set the work-group size (number of work-items per work-group)
-    group_size = 8
+    group_size = 256
 
     # Create and pad an array
     # Notice the initial array is not of dimensions 2^n, or a multiple of 2^n
-    a_h = np.random.random((3, 8))
+    a_h = np.random.random((5, 1024))
+    n_rows = a_h.shape[0]
+    row_length = a_h.shape[1]
 
     # Determine number of work-groups (work-items / work-group size)
-    work_groups = a_h.shape[1]//group_size
+    work_groups_per_row = row_length//group_size
 
     # Assign array of sum per work group
-    p_h = np.zeros((3, work_groups))
+    p_h = np.zeros((n_rows, work_groups_per_row))
 
     # Determine memory per work group (total size of array in bytes / number of
     # work groups, or, size of element of array in bytes * of work-group size)
-    local_memory_size = a_h[0].nbytes//work_groups
-    print(work_groups)
+    local_memory_size = a_h[0].nbytes//work_groups_per_row
+    print(work_groups_per_row)
     print(local_memory_size)
 
     # Create buffers
@@ -53,7 +55,7 @@ if __name__ == "__main__":
     redsum = program.sum_axis1
     print(a_h.shape)
     print(a_h)
-    redsum(queue, a_h.shape, (1, 8,), a_d, b_d, p_d)
+    redsum(queue, a_h.shape, (1, group_size,), a_d, b_d, p_d)
 
     cl.enqueue_copy(queue, p_h, p_d)
     print(p_h)
