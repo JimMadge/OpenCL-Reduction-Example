@@ -39,7 +39,6 @@ __kernel void sum_axis0(__global double* a, __local float* b,
 
     // Copy to local memory
     b[lid] = a[gid0*gsize1 + gid1];
-    // printf("%d\t%f\n", lid, b[lid]);
     barrier(CLK_LOCAL_MEM_FENCE);
 
     // Reduction within work group, sum is left in b[0]
