@@ -52,6 +52,54 @@ def redsum(array, context, program):
     return np.sum(p_h)
 
 
+def pad_axis0(array, group_size):
+    """Pad an array with zeros so that it is a multiple of the group size."""
+    sum_size = array.shape[0]
+    remainder = sum_size % group_size
+    if remainder == 0:
+        return array
+    else:
+        padding = group_size - sum_size % group_size
+        return np.vstack((array, np.zeros((padding, array.shape[1]))))
+
+
+def redsum_axis0(array, context, program, group_size=256):
+    # Create queue
+    queue = cl.CommandQueue(context)
+
+    # Pad array
+    a_h = pad_axis0(array, group_size)
+    print(a_h.shape)
+    n_cols = a_h.shape[1]
+    col_length = a_h.shape[0]
+
+    # Determine number of work-groups (work-items / work-group size)
+    work_groups_per_col = col_length//group_size
+
+    # Assign array of sum per work group
+    p_h = np.zeros((work_groups_per_col, n_cols))
+    print(p_h.shape)
+
+    # Determine memory per work group (total size of array in bytes / number of
+    # work groups, or, size of element of array in bytes * of work-group size)
+    local_memory_size = a_h[:, 0].nbytes//work_groups_per_col
+    print(local_memory_size)
+
+    # Create buffers
+    a_d = cl.Buffer(context, mf.READ_ONLY | mf.COPY_HOST_PTR, hostbuf=a_h)
+    b_d = cl.LocalMemory(local_memory_size)
+    p_d = cl.Buffer(context, mf.WRITE_ONLY, p_h.nbytes)
+
+    # Call kernel
+    redsum = program.sum_axis0
+    redsum(queue, a_h.shape, (group_size, 1,), a_d, b_d, p_d)
+    cl.enqueue_copy(queue, p_h, p_d)
+
+    # Sum residuals
+    print(p_h)
+    return np.sum(p_h, axis=0)
+
+
 def pad_axis1(array, group_size):
     """Pad an array with zeros so that it is a multiple of the group size."""
     sum_size = array.shape[1]
